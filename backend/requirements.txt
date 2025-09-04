@@ -1,0 +1,21 @@
+# Framework Principal
+Flask
+
+geoalchemy2
+
+# ORM (Interação com a Base de Dados)
+Flask-SQLAlchemy
+SQLAlchemy
+
+# Migrações da Base de Dados
+Flask-Migrate
+
+# Serialização (Conversão para JSON) e Validação
+Flask-Marshmallow
+marshmallow-sqlalchemy
+
+# Comunicação entre Domínios (React Native <-> API)
+Flask-Cors
+
+# Carregar variáveis de ambiente (para configurações)
+python-dotenv
