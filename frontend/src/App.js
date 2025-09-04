@@ -1,6 +1,7 @@
-import * as Location from 'expo-location'; // API de localização do Expo
+import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
-import { SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import { Alert, SafeAreaView, StatusBar, StyleSheet } from 'react-native';
+import { addTimelineEvent, registerPlant } from './services/api';
 
 import RegisterScreen from './screens/RegisterScreen';
 import TimelineScreen from './screens/TimelineScreen';
@@ -11,7 +12,7 @@ export default function App() {
     const [plantingDate, setPlantingDate] = useState(new Date());
     const [location, setLocation] = useState(null);
     const [locationError, setLocationError] = useState('');
-    const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+    const [isLoading, setIsLoading] = useState(false); // Um estado de loading geral
     const [activePlant, setActivePlant] = useState(null);
 
     useEffect(() => {
@@ -19,18 +20,14 @@ export default function App() {
     }, []);
 
     const handleGetLocation = async () => {
-        setIsLoadingLocation(true);
+        setIsLoading(true);
         setLocationError('');
-
-        // 1. Pedir permissão ao usuário
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
             setLocationError('Permissão de acesso à localização foi negada.');
-            setIsLoadingLocation(false);
+            setIsLoading(false);
             return;
         }
-
-        // 2. Obter a localização
         try {
             let position = await Location.getCurrentPositionAsync({});
             setLocation({
@@ -40,40 +37,56 @@ export default function App() {
         } catch (error) {
             setLocationError('Não foi possível obter a localização.');
         } finally {
-            setIsLoadingLocation(false);
+            setIsLoading(false);
         }
     };
 
-    const handleRegisterPlant = () => {
+    const handleRegisterPlant = async () => {
         if (!plantName || !plantingDate || !location) {
-            // Em apps nativos, é melhor usar um componente de alerta customizado
-            // mas por enquanto o console.error serve.
-            console.error('Por favor, preencha todos os campos e obtenha a geolocalização.');
+            Alert.alert('Erro', 'Por favor, preencha todos os campos e obtenha a geolocalização.');
             return;
         }
-        const newPlant = {
-            id: Date.now(),
-            name: plantName,
-            timeline: [
-                { phase: 'Plantio', date: plantingDate.toISOString(), location: location },
-            ],
-        };
-        setActivePlant(newPlant);
-        setScreen('timeline');
+
+        setIsLoading(true);
+        try {
+            const dataToSend = {
+                name: plantName,
+                planting_date: plantingDate.toISOString(),
+                location: location,
+            };
+            const newPlant = await registerPlant(dataToSend);
+            setActivePlant(newPlant);
+            setScreen('timeline');
+        } catch (error) {
+            Alert.alert('Falha na API', 'Não foi possível registrar a planta. Tente novamente.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleAddPhase = (phase) => {
-        const newPhase = {
-            phase: phase,
-            date: new Date().toISOString(),
-            location: null, // Pode-se obter a localização novamente aqui se desejado
-        };
-        setActivePlant(prevPlant => ({
-            ...prevPlant,
-            timeline: [...prevPlant.timeline, newPhase],
-        }));
-    };
+    const handleAddPhase = async (phase) => {
+        if (!activePlant) return;
 
+        setIsLoading(true);
+        try {
+            const dataToSend = {
+                phase: phase,
+                date: new Date().toISOString(),
+                location: null, // Para novas fases, podemos omitir a localização ou pegar a atual
+            };
+            // Adiciona o novo evento ao estado local para uma atualização instantânea da UI
+            const newEvent = await addTimelineEvent(activePlant.id, dataToSend);
+            setActivePlant(prevPlant => ({
+                ...prevPlant,
+                timeline: [...prevPlant.timeline, newEvent],
+            }));
+        } catch (error) {
+            Alert.alert('Falha na API', 'Não foi possível adicionar a nova fase.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
     const backToRegister = () => {
         setPlantName('');
         setPlantingDate(new Date());
@@ -82,30 +95,34 @@ export default function App() {
         handleGetLocation();
     };
 
+    // Ajusta o ecrã de registo para passar o estado de loading
+    const renderRegisterScreen = () => (
+        <RegisterScreen
+            plantName={plantName}
+            setPlantName={setPlantName}
+            plantingDate={plantingDate}
+            setPlantingDate={setPlantingDate}
+            location={location}
+            locationError={locationError}
+            isLoadingLocation={isLoading} // Usamos o loading geral
+            onGetLocation={handleGetLocation}
+            onRegister={handleRegisterPlant}
+        />
+    );
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" />
-            {screen === 'register' ? (
-                <RegisterScreen
-                    plantName={plantName}
-                    setPlantName={setPlantName}
-                    plantingDate={plantingDate}
-                    setPlantingDate={setPlantingDate}
-                    location={location}
-                    locationError={locationError}
-                    isLoadingLocation={isLoadingLocation}
-                    onGetLocation={handleGetLocation}
-                    onRegister={handleRegisterPlant}
-                />
-            ) : (
-                activePlant && (
+            {screen === 'register' 
+                ? renderRegisterScreen()
+                : (activePlant && (
                     <TimelineScreen
                         plant={activePlant}
                         onAddPhase={handleAddPhase}
                         onBack={backToRegister}
                     />
-                )
-            )}
+                  ))
+            }
         </SafeAreaView>
     );
 }
@@ -113,6 +130,6 @@ export default function App() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f3f4f6', // bg-gray-100
+        backgroundColor: '#f3f4f6',
     },
 });

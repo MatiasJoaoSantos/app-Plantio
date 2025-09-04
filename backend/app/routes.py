@@ -1,48 +1,73 @@
-from flask import jsonify, request
-from .models import Plant
-from .database import session
-from .models import Event
-from . import app
-from app import db
+from flask import Blueprint, request, jsonify
+from . import db
+from .models import Plant, TimelineEvent
+from .schemas import plant_schema
+from datetime import datetime
 
-@app.route('/plants', methods=['GET'])
-def get_plants():
-    plants = session.query(Plant).all()
-    return jsonify([plant.to_dict() for plant in plants])
+# Cria um "Blueprint" para organizar as nossas rotas
+api_bp = Blueprint('api', __name__, url_prefix='/api')
 
-@app.route('/plants', methods=['POST'])
-def create_plant():
-    plant = Plant(name=request.json['name'], description=request.json['description'])
-    session.add(plant)
-    session.commit()
-    return jsonify(plant.to_dict())
-
-@app.route("/events", methods=["POST"])
-def register_event():
+@api_bp.route('/plants', methods=['POST'])
+def add_plant():
     data = request.get_json()
-    event = Event(plant_id=data["plant_id"], previous_state=data["previous_state"], current_state=data["current_state"], datetime=data["datetime"])
-    db.session.add(event)
+    if not all(k in data for k in ('name', 'planting_date', 'location')):
+        return jsonify({'message': 'Dados incompletos fornecidos.'}), 400
+
+    try:
+        planting_date_obj = datetime.fromisoformat(data['planting_date'].replace('Z', ''))
+    except ValueError:
+        return jsonify({'message': 'Formato de data inválido. Use o formato ISO 8601.'}), 400
+
+    new_plant = Plant(
+        name=data['name'],
+        planting_date=planting_date_obj
+    )
+    db.session.add(new_plant)
     db.session.commit()
-    return jsonify({"message": "Event registered successfully!"})
 
-@app.route("/plants/<int:plant_id>", methods=["GET"])
-def get_plant(plant_id):
-    plant = Plant.query.get(plant_id)
-    events = Event.query.filter_by(plant_id=plant_id).all()
-    return jsonify({"plant": plant.to_dict(), "events": [event.to_dict() for event in events]})
-    
-    
-@app.route('/plants/<int:plant_id>', methods=['PUT'])
-def update_plant(plant_id):
-    plant = session.query(Plant).get(plant_id)
-    plant.name = request.json['name']
-    plant.description = request.json['description']
-    session.commit()
-    return jsonify(plant.to_dict())
+    location = data['location']
+    initial_event = TimelineEvent(
+        phase='Plantio',
+        event_date=new_plant.planting_date,
+        plant_id=new_plant.id,
+        latitude=location.get('latitude'),
+        longitude=location.get('longitude')
+    )
+    db.session.add(initial_event)
+    db.session.commit()
 
-@app.route('/plants/<int:plant_id>', methods=['DELETE'])
-def delete_plant(plant_id):
-    plant = session.query(Plant).get(plant_id)
-    session.delete(plant)
-    session.commit()
-    return jsonify({'message': 'Plant deleted'})
+    # --- A CORREÇÃO ESTÁ AQUI ---
+    # Recarrega a `new_plant` da sessão da base de dados.
+    # Isto garante que a relação `timeline` é carregada com o evento que acabámos de criar.
+    db.session.refresh(new_plant)
+
+    return jsonify(plant_schema.dump(new_plant)), 201
+
+
+@api_bp.route('/plants/<int:plant_id>/timeline', methods=['POST'])
+def add_timeline_event(plant_id):
+    # (O resto do ficheiro continua igual...)
+    plant = Plant.query.get_or_404(plant_id)
+    data = request.get_json()
+    if not data or not data.get('phase'):
+        return jsonify({'message': 'A fase do evento é obrigatória.'}), 400
+    
+    event_date = datetime.fromisoformat(data['date'].replace('Z', '')) if data.get('date') else datetime.utcnow()
+    
+    new_event = TimelineEvent(
+        phase=data['phase'],
+        event_date=event_date,
+        plant_id=plant.id,
+        latitude=data.get('location', {}).get('latitude'),
+        longitude=data.get('location', {}).get('longitude')
+    )
+    db.session.add(new_event)
+    db.session.commit()
+
+    # Para consistência, também podemos recarregar aqui, embora não seja estritamente necessário para a lógica atual
+    db.session.refresh(new_event)
+    
+    # Usamos o schema do evento aqui
+    from .schemas import timeline_event_schema
+    return jsonify(timeline_event_schema.dump(new_event)), 201
+
