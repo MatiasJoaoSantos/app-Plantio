@@ -1,9 +1,48 @@
 // Endereço base da sua API Flask. 
 // Use o IP da sua máquina em vez de 'localhost' para testar no telemóvel físico.
-// Ex: 'http://192.168.1.10:5000/api'
-const API_URL = 'http://localhost:5000/api';
+// Ex: 'http://192.168.1.5:5000/api'
+const API_URL = 'http://localhost:5000/api'; // Lembre-se de ajustar para o seu IP se necessário
 
-// Função para registrar uma nova planta
+/**
+ * Busca a lista de todas as plantas.
+ * @returns {Promise<Array>} A lista de plantas.
+ */
+export const getPlants = async () => {
+    try {
+        const response = await fetch(`${API_URL}/plants`);
+        if (!response.ok) {
+            throw new Error('Falha ao buscar plantas.');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Erro em getPlants:', error);
+        throw error;
+    }
+};
+
+/**
+ * Busca os dados de uma planta específica pelo ID.
+ * @param {number} plantId O ID da planta.
+ * @returns {Promise<object>} Os dados da planta.
+ */
+export const getPlant = async (plantId) => {
+    try {
+        const response = await fetch(`${API_URL}/plants/${plantId}`);
+        if (!response.ok) {
+            throw new Error('Planta não encontrada.');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Erro em getPlant:', error);
+        throw error;
+    }
+};
+
+/**
+ * Registra uma nova planta.
+ * @param {object} plantData Os dados da nova planta.
+ * @returns {Promise<object>} A planta recém-criada.
+ */
 export const registerPlant = async (plantData) => {
     try {
         const response = await fetch(`${API_URL}/plants`, {
@@ -15,17 +54,23 @@ export const registerPlant = async (plantData) => {
         });
 
         if (!response.ok) {
-            throw new Error('Falha ao registrar a planta.');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao registrar a planta.');
         }
 
         return await response.json();
     } catch (error) {
         console.error('Erro em registerPlant:', error);
-        throw error; // Propaga o erro para o componente tratar
+        throw error;
     }
 };
 
-// Função para adicionar uma nova fase à timeline
+/**
+ * Adiciona um novo evento à timeline de uma planta.
+ * @param {number} plantId O ID da planta.
+ * @param {object} eventData Os dados do novo evento.
+ * @returns {Promise<object>} O evento recém-criado.
+ */
 export const addTimelineEvent = async (plantId, eventData) => {
     try {
         const response = await fetch(`${API_URL}/plants/${plantId}/timeline`, {
@@ -37,7 +82,8 @@ export const addTimelineEvent = async (plantId, eventData) => {
         });
 
         if (!response.ok) {
-            throw new Error('Falha ao adicionar evento.');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao adicionar evento.');
         }
 
         return await response.json();
@@ -47,4 +93,3 @@ export const addTimelineEvent = async (plantId, eventData) => {
     }
 };
 
-// Poderíamos adicionar mais funções aqui, como getPlants, deletePlant, etc.
