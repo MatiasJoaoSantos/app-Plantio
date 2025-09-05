@@ -16,3 +16,10 @@ class Config(object):
 
     # Adicione essa linha para especificar o tipo de dado geométrico
     SQLALCHEMY_NATIVE_TYPES = ['geometry']
+
+    # Adicione essas linhas para configurar o CORS
+    CORS_HEADERS = 'Content-Type'
+    CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
+    CORS_SUPPORTS_CREDENTIALS = True
+    CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
+

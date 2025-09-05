@@ -1,11 +1,21 @@
 from flask import Blueprint, request, jsonify
 from . import db
 from .models import Plant, TimelineEvent
-from .schemas import plant_schema
+from .schemas import plant_schema, plants_schema, timeline_event_schema, timeline_events_schema
 from datetime import datetime
 
 # Cria um "Blueprint" para organizar as nossas rotas
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+@api_bp.route('/plants', methods=['GET'])
+def get_all_plants():
+    plants = Plant.query.all()
+    return jsonify(plants_schema.dump(plants))
+
+@api_bp.route('/plants/<int:plant_id>', methods=['GET'])
+def get_plant(plant_id):
+    plant = Plant.query.get_or_404(plant_id)
+    return jsonify(plant_schema.dump(plant))
 
 @api_bp.route('/plants', methods=['POST'])
 def add_plant():
@@ -36,17 +46,18 @@ def add_plant():
     db.session.add(initial_event)
     db.session.commit()
 
-    # --- A CORREÇÃO ESTÁ AQUI ---
-    # Recarrega a `new_plant` da sessão da base de dados.
-    # Isto garante que a relação `timeline` é carregada com o evento que acabámos de criar.
     db.session.refresh(new_plant)
 
     return jsonify(plant_schema.dump(new_plant)), 201
 
+@api_bp.route('/plants/<int:plant_id>/timeline', methods=['GET'])
+def get_timeline_events(plant_id):
+    plant = Plant.query.get_or_404(plant_id)
+    events = TimelineEvent.query.filter_by(plant_id=plant_id).all()
+    return jsonify(timeline_events_schema.dump(events))
 
 @api_bp.route('/plants/<int:plant_id>/timeline', methods=['POST'])
 def add_timeline_event(plant_id):
-    # (O resto do ficheiro continua igual...)
     plant = Plant.query.get_or_404(plant_id)
     data = request.get_json()
     if not data or not data.get('phase'):
@@ -64,10 +75,7 @@ def add_timeline_event(plant_id):
     db.session.add(new_event)
     db.session.commit()
 
-    # Para consistência, também podemos recarregar aqui, embora não seja estritamente necessário para a lógica atual
     db.session.refresh(new_event)
     
-    # Usamos o schema do evento aqui
-    from .schemas import timeline_event_schema
     return jsonify(timeline_event_schema.dump(new_event)), 201
 
