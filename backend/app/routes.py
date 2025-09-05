@@ -42,7 +42,7 @@ def add_plant():
     location = data.get('location', {})
     initial_event = TimelineEvent(
         phase='Plantio',
-        event_date=new_plant.planting_date,
+        event_date=planting_date_obj,
         plant_id=new_plant.id,
         latitude=location.get('latitude'),
         longitude=location.get('longitude')

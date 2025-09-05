@@ -16,7 +16,10 @@ const TimelineScreen = ({ plant, onAddPhase, onBack }) => {
                         <TimelineIcon phase={event.phase} />
                         <View style={styles.eventDetails}>
                             <Text style={styles.eventPhase}>{event.phase}</Text>
-                            <Text style={styles.eventDate}>{new Date(event.date).toLocaleString('pt-BR')}</Text>
+                            {/* --- CORREÇÃO APLICADA AQUI --- */}
+                            {/* O nome do campo no JSON de resposta é 'event_date', não 'date' */}
+                            <Text style={styles.eventDate}>{new Date(event.event_date).toLocaleString('pt-BR')}</Text>
+                            {/* --- FIM DA CORREÇÃO --- */}
                             {event.location && (
                                 <View style={styles.eventLocation}>
                                     <LocationIcon />

@@ -3,6 +3,21 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { PlantIcon } from '../components/Icons';
 
+// Função auxiliar para formatar a data e hora no padrão brasileiro
+const formatDateTime = (date) => {
+    if (!(date instanceof Date) || isNaN(date)) {
+        return 'Data inválida';
+    }
+    return date.toLocaleString('pt-BR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).replace(',', '');
+};
+
+
 const RegisterScreen = ({
     plantName, setPlantName, plantingDate, setPlantingDate,
     location, locationError, isLoadingLocation,
@@ -38,7 +53,8 @@ const RegisterScreen = ({
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Data de Plantio</Text>
                     <Pressable onPress={() => setShowDatePicker(true)}>
-                        <Text style={styles.input}>{plantingDate.toLocaleString('pt-BR')}</Text>
+                        {/* --- CORREÇÃO APLICADA AQUI --- */}
+                        <Text style={styles.input}>{formatDateTime(plantingDate)}</Text>
                     </Pressable>
                     {showDatePicker && (
                         <DateTimePicker
@@ -83,7 +99,6 @@ const RegisterScreen = ({
     );
 };
 
-// ... Estilos (ver abaixo)
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 24, justifyContent: 'center' },
     header: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
@@ -99,6 +114,7 @@ const styles = StyleSheet.create({
         borderColor: '#d1d5db',
         borderRadius: 8,
         fontSize: 16,
+        color: '#1f2937'
     },
     locationBox: {
         flexDirection: 'row',
