@@ -1,25 +1,14 @@
 import os
-from sqlalchemy import create_engine
-from geoalchemy2 import WKTElement
 
-
+# Define o diretório base da pasta 'app'
 basedir = os.path.abspath(os.path.dirname(__file__))
-SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
 
-class Config(object):
-    """Classe de configura o do aplicativo"""
-
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'secret-key-here'
+class Config:
+    """Configurações da aplicação Flask."""
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'uma-chave-secreta-muito-segura'
+    
+    # Aponta a base de dados para um ficheiro `dev.db` dentro da pasta `instance`
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'app.db')
+        'sqlite:///' + os.path.join(basedir, '..', 'instance', 'dev.db')
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    # Adicione essa linha para especificar o tipo de dado geométrico
-    SQLALCHEMY_NATIVE_TYPES = ['geometry']
-
-    # Adicione essas linhas para configurar o CORS
-    CORS_HEADERS = 'Content-Type'
-    CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
-    CORS_SUPPORTS_CREDENTIALS = True
-    CORS_EXPOSE_HEADERS = ['Content-Type', 'Authorization']
-

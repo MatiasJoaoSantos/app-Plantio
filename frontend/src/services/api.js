@@ -1,7 +1,7 @@
 // Endereço base da sua API Flask. 
 // Use o IP da sua máquina em vez de 'localhost' para testar no telemóvel físico.
 // Ex: 'http://192.168.1.10:5000/api'
-const API_URL = 'http://192.168.1.15:5000/api';
+const API_URL = 'http://localhost:5000/api';
 
 // Função para registrar uma nova planta
 export const registerPlant = async (plantData) => {
