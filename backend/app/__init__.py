@@ -9,6 +9,7 @@ from .config import Config
 db = SQLAlchemy()
 ma = Marshmallow()
 migrate = Migrate()
+# Configura o CORS antes de criar a app
 cors = CORS()
 
 def create_app(config_class=Config):
@@ -16,14 +17,13 @@ def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
 
+    
+    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+
     # Associa as extensões à nossa instância da aplicação
     db.init_app(app)
     ma.init_app(app)
     migrate.init_app(app, db)
-    
-    # Esta linha configura o CORS corretamente para si.
-    # Permite requisições de qualquer origem para qualquer rota que comece com /api/
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
 
     with app.app_context():
         # Importa e regista as nossas rotas na aplicação

@@ -9,7 +9,6 @@ class TimelineEventSchema(ma.SQLAlchemyAutoSchema):
 
 class PlantSchema(ma.SQLAlchemyAutoSchema):
     timeline = ma.Nested(TimelineEventSchema, many=True, dump_only=True)
-    
     class Meta:
         model = Plant
         load_instance = True
